@@ -4,6 +4,8 @@ File: Server.js
 Description: Web API scaffolding for Movie API
  */
 
+let envPath = __dirname + "/.env"
+require('dotenv').config({path:envPath});
 var express = require('express');
 var bodyParser = require('body-parser');
 var passport = require('passport');
@@ -21,6 +23,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
 
 var router = express.Router();
+var Movie = require('./movies');
 
 function getJSONObjectForMovieRequirement(req) {
     var json = {
@@ -83,6 +86,13 @@ router.post('/signin', function (req, res) {
             }
         })
     })
+});
+
+//All other routes and methods
+router.all('*', function(req, res) {
+    res.json({
+        error: 'Your HTTP method is not supported. Fix it please.👮‍'
+    });
 });
 
 app.use('/', router);
