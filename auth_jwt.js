@@ -1,16 +1,10 @@
-/*
-CSCI3916_HW3
-Name: Ayan Tuladhar
-File: auth_jwt.js
-Description: Web API scaffolding for Authentication API
- */
-
+let envPath = __dirname + "/.env"
+require('dotenv').config({path:envPath});
 var passport = require('passport');
 var JwtStrategy = require('passport-jwt').Strategy;
 var ExtractJwt = require('passport-jwt').ExtractJwt;
 var User = require('./Users');
 
-require("dotenv").config()
 var opts = {};
 opts.jwtFromRequest = ExtractJwt.fromAuthHeaderWithScheme("jwt");
 opts.secretOrKey = process.env.SECRET_KEY;
