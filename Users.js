@@ -1,9 +1,15 @@
-let envPath = __dirname + "/../.env"
-require('dotenv').config({path:envPath});
+/*
+CSCI3916_HW3
+Name: Ayan Tuladhar
+File: User.js
+Description: Web API scaffolding for Users
+ */
+
+
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 var bcrypt = require('bcrypt-nodejs');
-
+require("dotenv").config()
 mongoose.Promise = global.Promise;
 
 //mongoose.connect(process.env.DB, { useNewUrlParser: true });
