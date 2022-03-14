@@ -1,5 +1,6 @@
 /*
-CSC3916 HW2
+CSCI3916_HW3
+Name: Ayan Tuladhar
 File: Server.js
 Description: Web API scaffolding for Movie API
  */
@@ -12,21 +13,21 @@ var authJwtController = require('./auth_jwt');
 var jwt = require('jsonwebtoken');
 var cors = require('cors');
 var User = require('./Users');
-
+var Movies = require('./Movies');
 var app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-
+app.use(bodyParser.urlencoded({ extended: false}));
 app.use(passport.initialize());
-
 var router = express.Router();
 
-function getJSONObjectForMovieRequirement(req) {
-    var json = {
-        headers: "No headers",
+function getJSONObjectForMovieRequirement(req)
+{
+    var json =
+        {
+        headers: "No Headers",
         key: process.env.UNIQUE_KEY,
-        body: "No body"
+        body: "No Body",
     };
 
     if (req.body != null) {
@@ -40,7 +41,8 @@ function getJSONObjectForMovieRequirement(req) {
     return json;
 }
 
-router.post('/signup', function(req, res) {
+
+router.post('/signup', function (req, res) {
     if (!req.body.username || !req.body.password) {
         res.json({success: false, msg: 'Please include both username and password to signup.'})
     } else {
@@ -51,8 +53,8 @@ router.post('/signup', function(req, res) {
 
         user.save(function(err){
             if (err) {
-                if (err.code == 11000)
-                    return res.json({ success: false, message: 'A user with that username already exists.'});
+                if (err.code === 11000)
+                    return res.json({success: false, message: 'A user with that username already exists.'});
                 else
                     return res.json(err);
             }
@@ -85,8 +87,78 @@ router.post('/signin', function (req, res) {
     })
 });
 
+router.route('/movies')
+    .get(authJwtController.isAuthenticated, function(req, res){
+        //DB query based off the title only.
+        Movies.findOne( {title: req.body.message}).select('title releaseYear genre actors').exec(function (err, movie) {
+            if (err) {
+                res.send(err)
+            }
+            let resMovie = {
+                title: movie.title,
+                releaseYear: movie.releaseYear,
+                genre: movie.genre,
+                actors: movie.actors
+            }
+            res.json(resMovie);
+        })
+    })
+    .post(authJwtController.isAuthenticated, function (req,res){
+    const { title, releaseYear, genre, actors } = req.body;
+    if(!title){return res.json({success: false, info: "Title Missing, Please add the Title of the Movie"});}
+    else if(!releaseYear){return res.json({success: false, info: "Release Year Missing, Please add the Release Year of the Movie"});}
+    else if(!genre){return res.json({success: false, info: "Genre Missing, Please add genre of the Movie"});}
+    else if(!actors || actors.length < 3){return res.json({success: false, info: "Actors Missing, Please add at least 3 actors of the Movie"});}
+    else{
+        var movieNew = new Movies();
+        movieNew.title = req.body.title;
+        movieNew.releaseYear = req.body.releaseYear;
+        movieNew.genre = req.body.genre;
+        movieNew.actors = req.body.actors;
+        movieNew.save(function (err){
+            if (err) {
+                if (err.code === 11000)
+                    return res.json({success: false, message: 'A user with that username already exists.'});
+                else
+                    return res.json(err);
+            }
+            res.send({status: 200, message: "Movie has been saved.", headers: req.headers, query: req.query, env: process.env.UNIQUE_KEY});
+        });
+    }
+
+})
+    .put(authJwtController.isAuthenticated, function (req,res){
+        //DB query based off title only.
+        Movies.findOneAndUpdate({title: req.body.title}, {releaseYear: req.body.releaseYear}).exec(function (err, movie) {
+            if (err)
+                res.send(err)
+            else
+                res.json( {status: 200, message: "Movie Year has been updated.", new_releaseYear: req.body.releaseYear})
+        });
+        Movies.findOneAndUpdate({title: req.body.title}, {actors: req.body.actors}).exec(function (err, movie) {
+            if (err)
+                res.send(err)
+            else
+                res.json( {status: 200, message: "Movie Actors has been updated.", new_actors: req.body.actors})
+        });
+        Movies.findOneAndUpdate({title: req.body.title}, {genre: req.body.genre}).exec(function (err, movie) {
+            if (err)
+                res.send(err)
+            else
+                res.json( {status: 200, message: "Movie Genre has been updated. ", new_genre: req.body.genre})
+        });
+    })
+    .delete(authJwtController.isAuthenticated, function(req, res) {
+        //DB query based off title only.
+        Movies.findOneAndDelete( {title: req.body.title}).exec(function (err, movie) {
+            if (err)
+                res.send(err)
+            else
+                res.json( {status: 200, message: "Movie has been deleted.", deleted_movie: req.body.title})
+        });
+    });
+
+
 app.use('/', router);
-app.listen(process.env.PORT || 8080);
+app.listen(process.env.PORT || 8000);
 module.exports = app; // for testing only
-
-
