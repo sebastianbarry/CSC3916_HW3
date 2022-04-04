@@ -1,10 +1,3 @@
-/*
-CSCI3916_HW3
-Name: Ayan Tuladhar
-File: User.js
-Description: Web API scaffolding for Users
- */
-
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;

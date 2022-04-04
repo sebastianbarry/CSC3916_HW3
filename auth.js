@@ -1,9 +1,3 @@
-/*
-CSCI3916_HW3
-Name: Ayan Tuladhar
-File: auth.js
-Description: Web API scaffolding for Authentication API
- */
 
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;

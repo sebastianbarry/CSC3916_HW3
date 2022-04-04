@@ -1,9 +1,3 @@
-/*
-CSCI3916_HW3
-Name: Ayan Tuladhar
-File: Movies.js
-Description: Web API scaffolding for Movie API
- */
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
