@@ -1,10 +1,3 @@
-/*
-CSCI3916_HW3
-Name: Ayan Tuladhar
-File: Server.js
-Description: Web API scaffolding for Movie API
- */
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const passport = require('passport');
@@ -94,166 +87,185 @@ router.post('/signin', function (req, res)
     })
 });
 
-router.route('/movies')
-    .get(authJwtController.isAuthenticated, function (req, res)
-    {
-        console.log(req.body);
-        res = res.status(200);
-        if (req.get('Content-Type'))
-        {
-            res = res.type(req.get('Content-Type'));
-        }
-        Movie.find().exec(function (err, movies)
-        {
-            if (err)
+router.get("/movies", authJwtController.isAuthenticated, async (req, res) => {
+    try {
+      const movies = await Movies.find();
+      if (req.query.reviews === "true") {
+        Movies.aggregate(
+          [
             {
-                res.send(err);
+              $match: { movie: movies.title },
+            },
+            {
+              $lookup: {
+                from: "reviews",
+                localField: "movie",
+                foreignField: "movie",
+                as: "Review",
+              },
+            },
+          ],
+          (error, result) => {
+            if (error) {
+              return res.status(500).json(error);
             }
-            if (movies.length < 1)
-            {
-                res.json({success: false, message: 'No movies found.'});
+            return res
+              .status(200)
+              .json({ success: true, msg: "Movie with reviews found", result });
+          }
+        );
+      }
+      return res.status(200).json(movies);
+    } catch (error) {
+      return res.status(500).json(error);
+    }
+  });
+  
+  router.post("/movies", authJwtController.isAuthenticated, (req, res) => {
+    const { title, year, genre, actors } = req.body;
+    if (!actors || actors.length < 3) {
+      return res
+        .status(500)
+        .json({ success: false, msg: "Must have at least 3 actors" });
+    }
+    Movies.create(
+      {
+        title,
+        year,
+        genre,
+        actors,
+      },
+      (error, movie) => {
+        if (error) {
+          return res.status(500).json(error);
+        }
+        return res
+          .status(200)
+          .json({ success: true, msg: "Movie created", movie });
+      }
+    );
+  });
+  
+  router.get(
+    "/movie/:movieID",
+    authJwtController.isAuthenticated,
+    async (req, res) => {
+      try {
+        const movie = await Movies.findById(req.params.movieID);
+        if (!movie) {
+          return res.status(500).json("Movie does not exists");
+        }
+        if (req.query.reviews === "true") {
+          Movies.aggregate(
+            [
+              {
+                $match: { title: movie.title },
+              },
+              {
+                $lookup: {
+                  from: "reviews",
+                  localField: "title",
+                  foreignField: "movie",
+                  as: "Reviews",
+                },
+              },
+            ],
+            (error, movie) => {
+              if (error) {
+                return res.status(500).json(error);
+              }
+              return res
+                .status(200)
+                .json({ success: true, msg: "Movie with reviews found", movie });
             }
-            else
-            {
-                res.json(movies);
-            }
-        })
-    })
-
-    .post(authJwtController.isAuthenticated, function (req, res)
-    {
-        console.log(req.body);
-        res = res.status(200);
-        const genres =
-            ["Action",
-            "Adventure",
-            "Comedy",
-            "Drama",
-            "Fantasy",
-            "Horror",
-            "Mystery",
-            "Thriller"];
-        if(!req.body.title){res.json({success: false, message: "Title Missing, Please add the Title of the Movie"});}
-        else if (!req.body.genre)
-        {
-            res.json({success: false, message: 'Genre Missing, Please add Genre of the Movie.'})
+          );
+        } else {
+          return res
+            .status(200)
+            .json({ success: true, msg: "Movie found", movie });
         }
-        else if (!genres.includes(req.body.genre))
-        {
-            res.json({success: false, message: "Genre Missing, Please add Genre of the Movie.", accepted_genres: genres})
-        }
-        else if (req.body.yearReleased.length < 4)
-        {
-            res.json({success: false, message: 'Release Year Missing, Please add the Release Year of the Movie or Please add 4 digits for Release Year.'})
-        }
-        else if (req.body.actors.length < 3)
-        {
-            res.json({success: false, message: 'Actors Missing, Please add at least 3 actors of the Movie.'})
-        }
-        else {
-            let movieNew = new Movie();
-            movieNew.title = req.body.title;
-            movieNew.yearReleased = req.body.yearReleased;
-            movieNew.genre = req.body.genre;
-            movieNew.actors = req.body.actors;
-
-            if (req.get('Content-Type'))
-            {
-                res = res.type(req.get('Content-Type'));
-            }
-
-            movieNew.save(function (err)
-            {
-                if (err) {
-                    if (err.code === 11000)
-                        return res.json({success: false, message: 'This Movie already exists.'});
-                    else
-                        return res.json(err);
-                } else {
-                    var o = getJSONObjectForMovieRequirement(req, 'Movie has been saved');
-                    res.json(o)
-                }
-            });
-        }
-    })
-
-
-
-router.route('/movies/:title')
-    .get(authJwtController.isAuthenticated, function (req, res)
-    {
-        console.log(req.body);
-        res = res.status(200);
-
-        if (req.get('Content-Type'))
-        {
-            res = res.type(req.get('Content-Type'));
-        }
-        Movie.find({title: req.params.title}).exec(function (err, movie)
-        {
-            if (err)
-            {
-                res.send(err);
-            }
-            res.json(movie);
-        })
-    })
-    .delete(authJwtController.isAuthenticated, function (req, res)
-    {
-        console.log(req.body);
-        res = res.status(200);
-        if (req.get('Content-Type'))
-        {
-            res = res.type(req.get('Content-Type'));
-        }
-        Movie.find({title: req.params.title}).exec(function (err, movie) {
-            if (err)
-            {
-                res.send(err);
-            }
-            console.log(movie);
-            if (movie.length < 1)
-            {
-                res.json({success: false, message: 'The Movie Title you entered could not be found.'});
-            } else
-            {
-                Movie.deleteOne({title: req.params.title}).exec(function (err)
-                {
-                    if (err)
-                    {
-                        res.send(err);
-                    } else
-                    {
-                        var o = getJSONObjectForMovieRequirement(req, 'Movie has been deleted');
-                        res.json(o);
-                    }
-                })
-            }
-        })
-    })
-    .put(authJwtController.isAuthenticated, function (req, res)
-    {
-        console.log(req.body);
-        res = res.status(200);
-        if (req.get('Content-Type'))
-        {
-            res = res.type(req.get('Content-Type'));
-        }
-        Movie.updateOne({title: req.params.title},
-            {
-            title: req.body.title,
-            yearReleased: req.body.yearReleased, genre: req.body.genre, actors: req.body.actors
-        })
-            .exec(function (err)
-            {
-                if (err)
-                {
-                    res.send(err);
-                }
-            })
-        var o = getJSONObjectForMovieRequirement(req, 'Movie has been updated');
-        res.json(o);
+      } catch (error) {
+        return res.status(500).json(error);
+      }
+    }
+  );
+  router.put("/movie/:movieID", authJwtController.isAuthenticated, (req, res) => {
+    const { title, year, genre, actors } = req.body;
+    if (!actors || actors.length < 3) {
+      return res
+        .status(500)
+        .json({ success: false, msg: "Must have at least 3 actors" });
+    }
+  
+    Movies.findByIdAndUpdate(
+      req.params.movieID,
+      {
+        $set: { title: title, year: year, genre: genre, actors: actors },
+      },
+      { new: true }
+    ).exec((error, movie) => {
+      if (error) {
+        return res.status(500).json(error);
+      }
+      return res.status(200).json({ success: true, msg: "Movie updated", movie });
     });
+  });
+  router.delete(
+    "/movie/:movieID",
+    authJwtController.isAuthenticated,
+    async (req, res) => {
+      try {
+        const movie = await Movies.findByIdAndDelete(req.params.movieID);
+        return res.status(200).json(`${movie.title} has been deleted`);
+      } catch (error) {
+        return res.status(500).json(error);
+      }
+    }
+  );
+  
+  router.get("/reviews", async (req, res) => {
+    try {
+      const reviews = await Reviews.find();
+      if (!reviews) {
+        return res.json(500).json("No Reviews");
+      }
+  
+      return res.status(200).json(reviews);
+    } catch (error) {
+      return res.json(500).json(error);
+    }
+  });
+  router.post("/reviews", authJwtController.isAuthenticated, async (req, res) => {
+    const { movie, reviewer, quote, rating } = req.body;
+    if (!movie || !reviewer || !quote || !rating) {
+      return res.status(500).json({ success: false, msg: "Missing information" });
+    }
+    try {
+      const movieFound = await Movies.findOne({ title: movie });
+  
+      if (!movieFound) {
+        return res.status(404).json("Movie does not exist");
+      }
+      Reviews.create(
+        {
+          movie,
+          reviewer,
+          quote,
+          rating,
+        },
+        (error, review) => {
+          if (error) {
+            return res.status(500).json(error);
+          }
+          return res
+            .status(200)
+            .json({ success: true, msg: "Review created", review });
+        }
+      );
+    } catch (error) {
+      res.status(500).json(error);
+    }
+  });
 
 
 app.use('/', router);
