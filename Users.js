@@ -1,9 +1,18 @@
+/*
+CSCI3916_HW3
+Name: Ayan Tuladhar
+File: User.js
+Description: Web API scaffolding for Users
+ */
+
+
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 var bcrypt = require('bcrypt-nodejs');
 require("dotenv").config()
 mongoose.Promise = global.Promise;
 
+//mongoose.connect(process.env.DB, { useNewUrlParser: true });
 try {
     mongoose.connect( process.env.DB, {useNewUrlParser: true, useUnifiedTopology: true}, () =>
         console.log("connected"));
@@ -12,6 +21,7 @@ try {
 }
 mongoose.set('useCreateIndex', true);
 
+//user schema
 var UserSchema = new Schema({
     name: String,
     username: { type: String, required: true, index: { unique: true }},

@@ -1,7 +1,15 @@
+/*
+CSCI3916_HW3
+Name: Ayan Tuladhar
+File: Movies.js
+Description: Web API scaffolding for Movie API
+ */
+
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 mongoose.Promise = global.Promise;
 
+//mongoose.connect(process.env.DB, { useNewUrlParser: true });
 try
 {
     mongoose.connect( process.env.DB, {useNewUrlParser: true, useUnifiedTopology: true}, () =>
@@ -12,41 +20,14 @@ try
 }
 mongoose.set('useCreateIndex', true);
 
+//movies schema
 let MovieSchema = new Schema({
-    title: {
-      type: String,
-      required: true,
-    },
-    year: {
-      type: Number,
-      required: true,
-    },
-    genre: {
-      type: String,
-      required: true,
-      enum: [
-        "Action",
-        "Adventure",
-        "Comedy",
-        "Drama",
-        "Fantasy",
-        "Horror",
-        "Thriller",
-        "Western",
-      ],
-    },
-    actors: [
-      {
-        actorName: {
-          type: String,
-          required: true,
-        },
-        characterName: {
-          type: String,
-          required: true,
-        },
-      },
-    ],
-  });
+    title: {type: String, required: true, index: { unique: true}},
+    yearReleased: {type: String, required: true},
+    genre: {type: String, required: true},
+    actors: [{actorName: String, characterName: String}]
+});
 
+
+//return the model to server
 module.exports = mongoose.model('Movie', MovieSchema);
