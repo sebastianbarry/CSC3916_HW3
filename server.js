@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const User = require('./Users');
 const Movie = require("./Movies");
+const Review = require("./Reviews.js");
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -109,9 +110,37 @@ router.route('/movies')
             }
             else
             {
-                res.json(movies);
+                if (req.query.reviews === "true") {
+                    Movie.aggregate(
+                      [
+                        {
+                          $lookup: {
+                            from: "reviews",
+                            localField: "title",
+                            foreignField: "movieTitle",
+                            as: "reviews",
+                          },
+                        },
+                        { $sort: { avgRating: -1 } },
+                      ],
+                      (error, movie) => {
+                        if (error) {
+                          return res.status(500).json(error);
+                        }
+                        return res
+                          .status(200)
+                          .json({ success: true, msg: "Movie with reviews found", movie });
+                      }
+                    );
+                  } else {
+                    return res
+                      .status(200)
+                      .json({ success: true, msg: "Movie found", movies });
+                }
             }
+            
         })
+
     })
 
     .post(authJwtController.isAuthenticated, function (req, res)
@@ -150,6 +179,7 @@ router.route('/movies')
             movieNew.yearReleased = req.body.yearReleased;
             movieNew.genre = req.body.genre;
             movieNew.actors = req.body.actors;
+            movieNew.imageurl = req.body.url;
 
             if (req.get('Content-Type'))
             {
@@ -251,7 +281,7 @@ router.route('/movies/:title')
     
     router.route('/reviews')
     .post(authJwtController.isAuthenticated, function(req, res) {
-        if (!req.body.small_quote || !req.body.rating || !req.body.title)
+        if (!req.body.small_quote || !req.body.rating || !req.body.movieTitle)
         {
             return res.json({ success: false, message: 'Please include all information for small quote, rating, and title to query.'});
         }
@@ -266,22 +296,39 @@ router.route('/movies/:title')
                 } else {
                     review.user_id = ver_res.id;
 
-                    Movie.findOne({title: req.body.title}, function(err, movie) {
+                    Movie.findOne({title: req.body.movieTitle}, function(err, movie) {
                         if (err) {
                             return res.status(403).json({success: false, message: "Unable to post review for title passed in"});
                         } else if (!movie) {
                             return res.status(403).json({success: false, message: "Unable to find title to post review for."});
                         } else {
-                            review.movie_id = movie._id;
+                            review.movieTitle = req.body.movieTitle;
                             review.username = ver_res.username;
                             review.small_quote = req.body.small_quote;
                             review.rating = req.body.rating;
+
+                            Review.find({movieTitle: req.body.movieTitle}, function(err, review) {
+                                if (review.length !== 0) {
+                                    const ratings = review?.map((r) => r.rating);
+                                    console.log(ratings);
+                                    const averagerating = (ratings.reduce((sum, rating) => sum + rating, 0)/ratings.length).toFixed(2);
+                                    console.log(averagerating);
+                                    //movie.updateOne({avgRating: averagerating});
+                                    movie.avgRating = averagerating;
+
+                                } else {
+                                    //movie.updateOne({avgRating: req.body.rating});
+                                    movie.avgRating = req.body.rating;
+
+                                }
+                                
+                            })
 
                             review.save (function (err) {
                                 if (err) {
                                     return res.status(403).json({success: false, message: "Unable to post review for title passed in."});
                                 } else {
-                                    trackDimension(movie.genre, 'post/review', 'POST', review.rating, movie.title, '1');
+                                    //trackDimension(movie.genre, 'post/review', 'POST', review.rating, movie.title, '1');
 
                                     return res.status(200).json({success: true, message: "Successfully posted review for title passed in.", movie: movie});
                                 }
